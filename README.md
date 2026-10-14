@@ -1,129 +1,74 @@
-# Mtaani Errands — by LA & Savvy Limited
+# LA & SAVVY Mtaani Errands — by LA & Savvy Limited
 
-Ethical, transparent errands & delivery from **Rongai, Nairobi, Kenya**.
-hello@lasavvy.co.ke • [www.lasavvy.co.ke](https://www.lasavvy.co.ke)
+On-demand errands & delivery from **Rongai, Nairobi, Kenya** • hello@lasavvy.co.ke
+**Fair, Transparent, Ethical pricing - No surge**
 
-| App | Stack | Folder |
-| --- | --- | --- |
-| Admin web portal + public website + web booking | Next.js 14 App Router, Tailwind, shadcn/ui, Lucide | `apps/admin` |
-| Client mobile app | React Native, Expo SDK 57, Expo Router | `apps/mobile` |
-| Shared design tokens + ethical pricing formula (client-safe) | TypeScript | `packages/shared` |
-| Database, auth, RLS | Supabase (Postgres, Auth, Storage, Realtime) | `supabase/` |
-| Master logo (exact supplied artwork) | PNG | `brand/` |
+The Next.js 14 app now lives at the **repository root** so Vercel builds it with no extra
+settings (Vercel → Project → Settings → Build → **Root Directory must be empty / `./`**).
 
-Both apps run **immediately in demo mode** (no keys needed). Every key in `.env.example` is
-`"Will be provided later"` until you have it.
-
----
-
-## File structure
-
-```
-LA-SAVVY/
-├── .env.example                 # every key = "Will be provided later"
-├── brand/                       # master-logo.jpg (original) + logo-mark / logo-full / app-icon crops
-├── docs/
-│   ├── DEPLOY_IPHONE.md         # deploy to Vercel from the iPhone Claude app
-│   └── reference/               # the reference images this build follows
-├── packages/shared/src/
-│   ├── brand.ts                 # #0F3D2E #7A1C1C #C4A77D #FFFEF8 #E8F5E9, zones, roles
-│   ├── pricing.ts               # Base + km × rate + traffic × rate (+ tier adjustment)
-│   ├── routes.ts                # 22 km CBD → Shangrila Villas benchmark route
-│   └── types.ts
-├── apps/admin/                  # Next.js 14 → deploy to Vercel (Root Directory = apps/admin)
-│   ├── app/
-│   │   ├── page.tsx             # public site: header Home • Services • Mtaani • Savvy • About + Book an Errand
-│   │   ├── book/                # web client: route + traffic map → Ethical Pricing → Checkout
-│   │   ├── login/               # Main Admin (email+password) / Zone Admin (phone + access code)
-│   │   ├── admin/
-│   │   │   ├── page.tsx         # Dashboard: orders, revenue, active agents, ethical pricing monitor
-│   │   │   ├── payments/        # STEP 1 Payment Configuration
-│   │   │   ├── pricing/         # Pricing Config + internal competitor benchmark (Main Admin only)
-│   │   │   ├── users/           # STEP 4 User Management + Assign Delivery + WhatsApp
-│   │   │   ├── orders/          # Pending / Assigned / In Transit / Delivered, map, WhatsApp
-│   │   │   ├── suppliers/       # vetting, expiry alerts, reminder emails, margin tracking, quotes
-│   │   │   └── actions.ts       # server actions (role-checked)
-│   │   └── api/
-│   │       ├── public/          # config, quote, route, orders, quote-requests (used by mobile)
-│   │       ├── payments/mpesa/  # Daraja STK push + callback
-│   │       └── cron/            # daily supplier-expiry reminders (vercel.json)
-│   ├── components/ui/           # shadcn/ui (button, card, input, switch, dialog, badge, table…)
-│   ├── components/brand/        # logo, header, footer, payment icons
-│   ├── components/client/       # ethical pricing cards, traffic map
-│   ├── lib/server/              # db (Supabase / demo store), auth, pricing, fair-cap (server-only), mpesa…
-│   └── middleware.ts            # protects /admin, zone limits, CORS for the mobile app
-├── apps/mobile/src/
-│   ├── app/                     # index (splash) • login • otp • (tabs)/index (home) • (tabs)/market
-│   │                            # route • pricing • checkout • success
-│   ├── components/              # ui kit, Logo, TrafficMap (native + web), PaymentIcon
-│   └── lib/                     # api, auth (Supabase phone OTP), booking state
-└── supabase/
-    ├── migrations/0001_init.sql # tables + Row Level Security (main_admin > minor_admin > customer)
-    └── seed.sql
-```
-
----
-
-## Ethical pricing
-
-Customers only ever see one formula:
-
-```
-price = Base 80 + distance × 12 + traffic minutes × 1  (+ tier adjustment)
-```
-
-| Tier | Benchmark: CBD → Shangrila Villas Rongai, 22 km, 36 min traffic delay |
+| Route | What it does |
 | --- | --- |
-| **Scheduled Standard** (60–90 min, batch) | 80 + 264 + 16 (off-peak window, 45% of delay) − 80 pooled saving = **KES 280** |
-| **Instant Premium** (25–40 min, direct) | 80 + 264 + 36 = **KES 380** formula price |
+| `/` | Splash screen with logo → `/book` (signed in) or `/auth` |
+| `/auth` | Phone (07…) → 6-digit SMS OTP (`signInWithOtp` / `verifyOtp type sms`, +254 formatting) |
+| `/book` | Category chips, From/To with Google Places, multi-stop, live DistanceMatrix traffic pricing, description, attachments, 4 payment methods, Pay |
+| `/track`, `/track/[id]` | My orders + live tracking (Supabase Realtime), timeline, rider card + WhatsApp, payment instructions |
+| `/admin/login` | Email + password (`signInWithPassword`), checks `agents` role Main Admin or hello@lasavvy.co.ke |
+| `/admin` | Stats, latest 20 orders, Assign Delivery, Share via WhatsApp, status updates (live) |
+| `/admin/agents` | Add Minor Admin (name, phone, ID, role, zone), Active toggle, zone filter, assign + WhatsApp |
+| `/admin/pricing` | Main Admin only: formula inputs, internal competitor table (never shown to clients), Ethical mode |
+| `/admin/payments` | Main Admin only: M-Pesa STK, Paybill, PayPal, Card toggles + fields, last saved |
+| `/rider/[id]?t=…` | Rider page (no login): Start trip → shares phone GPS every ~15 s, Mark Delivered. Link is sent in the admin's WhatsApp share after Assign Delivery |
+| `/api/mpesa/stk`, `/api/mpesa/callback` | Daraja STK Push (falls back to manual Till 123456 until keys exist), signed callback |
 
-**Hidden fair-price ceiling (server only):** `customerPrice = min(formula, competitorAvg × 0.85)`.
-Competitor benchmarks (Glovo 350–450, Uber 380–480, Bolt 250–350) live only in
-`apps/admin/lib/server/fair-cap.ts` and the Main-Admin-only Pricing Config page. They are never in
-`packages/shared`, the mobile bundle, or any public API response. When the ceiling lowers a price,
-the customer sees a neutral "Fair-price ceiling" line in the breakdown, with no competitor names.
+## Pricing (the only formula customers see)
 
-> ⚠️ **With the default benchmarks, Instant comes out at KES 320, not 380.** The average is 376.67,
-> and × 0.85 gives a ceiling of KES 320, which is below the 380 formula price. That is the ceiling
-> doing its job. To show KES 380, either switch **Fair-price ceiling** off in *Admin → Pricing*, or
-> raise the benchmarks (the average must be ≥ KES 447). Scheduled stays at KES 280 either way.
+```
+Scheduled = Base 80 + km × 12 + traffic fee (low 10 / medium 20 / high 40) × multiplier + stops × 50
+            (each stop also adds 3 km)          traffic = duration_in_traffic / duration: >1.5 high, >1.2 medium
+Instant   = Scheduled + 100
+```
+All values are editable in `/admin/pricing`. Supabase recomputes `total_price` in a database
+trigger, so a customer cannot change the price they pay.
 
----
+## Live rider GPS (low cost)
 
-## Roles & security
+Assign Delivery creates a secret rider link, and **Share via WhatsApp** sends it to the rider. The rider
+taps *Start trip*: the order goes **In Transit** and the phone's GPS is sent every ~15 s (or after moving
+50 m) while the page stays open. The customer's `/track/[id]` map moves live through Supabase Realtime.
+- GPS is free, and the position updates use your existing Supabase plan.
+- With the Google Maps key, each tracking page view loads one map, which is covered by Google's monthly free credit.
+  Without the key, the map uses free OpenStreetMap.
+- Phone browsers pause GPS when the screen is off, so riders should keep the page open. The page asks the
+  phone to keep the screen awake.
 
-- **Main Admin** signs in with `MAIN_ADMIN_EMAIL` and `MAIN_ADMIN_PASSWORD`. Only the Main Admin
-  can manage payments, pricing, users and suppliers.
-- **Minor admins** (Errand Agent / Delivery Guy / Supplier) are added by the Main Admin. Each gets
-  a one-time 6-digit access code (stored hashed) that is shared over WhatsApp. They sign in on the
-  *Zone Admin* tab and see **only their zone's orders**. Middleware and server actions both enforce this.
-- Order totals are **always recomputed on the server**. A total sent by the client is ignored.
-- Payment fields show **"Will be provided later"** until the Main Admin saves a value. Secret
-  fields (card API keys) are write-only and never returned to clients.
-- Supabase **Row Level Security**: `is_main_admin()` / `my_zone()` policies, public read only for
-  `payment_config` and `pricing_config` settings, competitor data is Main-Admin-only.
-- Demo login (`admin@lasavvy.co.ke` / `mtaani-demo`) works only while `MAIN_ADMIN_PASSWORD` is
-  unset, and is refused entirely once Supabase is connected.
+## Demo mode (before keys arrive)
 
----
+Every key in `.env.example` is `"Will be provided later"`. Until they are set, the app works in demo mode:
+data is saved in the browser, any 6-digit OTP works, admin login is `hello@lasavvy.co.ke` / `mtaani-demo`,
+and the book page asks for an approximate km instead of using live Google Maps.
+
+## Going live — 4 steps
+
+1. **Supabase:** create a project → SQL Editor → run `supabase/schema.sql` (tables, RLS, trigger,
+   Realtime, `mtaani-files` bucket). Authentication → Users → add `hello@lasavvy.co.ke`, then run the
+   "MAIN ADMIN" statement at the bottom of the file. Authentication → Providers → Phone → enable an SMS provider.
+2. **Google Maps:** enable Maps JavaScript, Places, Distance Matrix and Directions APIs; restrict the key to `la-savvy.vercel.app`.
+3. **Vercel → Settings → Environment Variables:** add the values from `.env.example`, then redeploy.
+4. **M-Pesa:** add the Daraja keys. Until then customers are shown Till 123456.
 
 ## Run locally
 
 ```bash
-# Admin portal → http://localhost:3000  (login: admin@lasavvy.co.ke / mtaani-demo)
-cd apps/admin && npm install && npm run dev
-
-# Mobile app → scan the QR code with Expo Go on your iPhone
-cd apps/mobile && npm install && npx expo start
+npm install && npm run dev     # http://localhost:3000
 ```
 
-Set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to your Vercel URL so the app uses live pricing,
-payment config and orders. Without it the app shows offline estimates.
+## Other folders
 
-## Deploy
-
-See **[docs/DEPLOY_IPHONE.md](docs/DEPLOY_IPHONE.md)** for the full iPhone-only flow (Vercel + Supabase + Expo).
+- `apps/admin/` — previous v1 admin portal (kept for history; no longer deployed)
+- `apps/mobile/` — Expo React Native app (unchanged)
+- `packages/shared/`, `supabase/migrations/` — v1 code used by the folders above
+- `brand/` — master logo (unchanged)
 
 ---
 
-© 2025 LA & Savvy Limited • Rongai, Nairobi, Kenya
+© LA & Savvy Limited • Rongai, Nairobi, Kenya
