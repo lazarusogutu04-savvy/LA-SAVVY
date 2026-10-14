@@ -1,0 +1,8 @@
+{
+  "name": "@lasavvy/shared",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Client-safe design tokens, ethical pricing formula and shared types for Mtaani Errands. Never put competitor data in this package.",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}
